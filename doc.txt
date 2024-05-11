@@ -1,0 +1,24 @@
+Documentation
+29/04 11:00
+I cleaned the modelisation notebook, i added the two libraries, and  i will need to clean those libraries before the meeting on friday.
+## TODO Clean libraries
+The modelisation is already cleaned, so now i can add the part about the modelisation.
+
+29/04 10:00
+I finished the EDA part, and started the modelisation part.
+I added the data augmentation and the data generatore, and then added two libraries with the functions needed;
+Now i will proceed with the cleaning of the code by creating, first, a new branch on git.
+
+26/04 11:30
+I fixed the EDA part, and i added two masks to limit the categories and then i also find a way to justify this work, also i added a new work process including git so that from now on we will have more control over my code.
+26/04 11:30
+I fixed the EDA part, and i added two masks to limit the categories and then i also find a way to justify this work, also i added a new work process including git so that from now on we will have more control over my code.
+
+24/04 12:12
+I'm trying to extract the labels from the JSON file and show them so that i can justify my choice but it seems a difficult job to do, i might try to find another way of doing this task.
+
+24/04 11:37
+Okay now is making more sense, i want to mask the json of the file so that when it's analyzed it will return only 8 categories wich are defined in the labelId, i have to find a way to justify my choice, for that purpose i have to look in the documentations of the official site.
+
+24/04 11:09
+Now, the problem that i'm encountering is related to the categories, i have to find a way to reduce the categories to 8, insted of 32, then i will be able to go to the modelisation phase, even faster that i predicted.

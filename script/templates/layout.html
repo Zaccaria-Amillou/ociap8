@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <link rel="stylesheet" href="{{ url_for('static', filename= 'css/style.css') }}">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+      <title>Flask App</title>
+  </head>
+  <body style="background-color: azure">
+    
+    {% block body %}
+
+    {% endblock %}
+
+    <!-- Bootstrap Javascripts -->  
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  </body>
+</html>

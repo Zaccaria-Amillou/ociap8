@@ -1,0 +1,5 @@
+tensorflow==2.14.1
+opencv-python
+pandas
+PIL
+matplotlib
