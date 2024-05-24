@@ -108,6 +108,57 @@ def build_mini_unet(input_shape, n_classes):
     model = Model(inputs, outputs, name="Mini_U-Net")
     return model
 
+from tensorflow.keras.layers import AveragePooling2D, Conv2D, UpSampling2D, Concatenate
+
+def psp_block(input_tensor, n_filters):
+    """
+    This function builds a Pyramid Scene Parsing (PSP) block.
+
+    Args:
+        input_tensor (tf.Tensor): The input tensor.
+        n_filters (int): The number of filters for the convolutional layers.
+
+    Returns:
+        output_tensor (tf.Tensor): The output tensor.
+    """
+    # Pyramid pooling with different window sizes
+    pool_sizes = [1, 2, 4, 8]
+    pooled_tensors = []
+    for pool_size in pool_sizes:
+        pooled = AveragePooling2D(pool_size=(pool_size, pool_size))(input_tensor)
+        conv = Conv2D(n_filters, 1, padding="same", activation="relu")(pooled)
+        upsampled = UpSampling2D(size=(pool_size, pool_size))(conv)
+        pooled_tensors.append(upsampled)
+
+    # Concatenate the original tensor with the pooled tensors
+    output_tensor = Concatenate(axis=-1)([input_tensor] + pooled_tensors)
+    return output_tensor
+
+# Modify the U-Net architecture to incorporate a PSP block
+def build_psp_unet(input_shape, n_classes):
+    inputs = Input(input_shape)
+
+    # Encoder blocks
+    s1, p1 = encoder_block(inputs, 32)
+    s2, p2 = encoder_block(p1, 64)
+
+    # PSP block
+    psp = psp_block(p2, 128)
+
+    # Decoder blocks
+    d1 = decoder_block(psp, s2, 64)
+    d2 = decoder_block(d1, s1, 32)
+
+    # Output layer
+    if n_classes == 1:
+        activation = "sigmoid"
+    else:
+        activation = "softmax"
+    outputs = Conv2D(n_classes, 1, padding="same", activation=activation)(d2)
+
+    model = Model(inputs, outputs, name="PSP_U-Net")
+    return model
+
 
 def build_vgg16_unet(input_shape, nb_classes):
     """

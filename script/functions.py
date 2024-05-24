@@ -25,9 +25,9 @@ MODELPATH = "../model/"
 HISTORY_PATH = "../model/history/"
 
 monitor_val = "val_mean_iou"
-learning_rate = 1e-5
-nbr_epochs = 15
-patience = 2
+learning_rate = 0.00001
+nbr_epochs = 20
+patience = 5
 
 # Définir dimensions images
 DIM_X = 256
@@ -55,6 +55,17 @@ cats_id = {
     "sky": (5),
     "human": (6),
     "vehicle": (7),
+}
+
+cats_color = {
+    "void": (0, 0, 0),  # Black
+    "flat": (128, 0, 128),  # Purple
+    "construction": (128, 128, 128),  # Grey
+    "object": (255, 255, 0),  # Yellow
+    "nature": (0, 128, 0),  # Green
+    "sky": (173, 216, 230),  # Light Blue
+    "human": (255, 0, 0),  # Red
+    "vehicle": (0, 0, 255),  # Blue
 }
 
 
@@ -88,41 +99,19 @@ def convert_mask(img):
     return np.array(mask, dtype="uint8")
 
 
-# Fonction pour l'exemple d'augmentation des données
+
 def augment_data(X, y):
-    """
-    Applique une série de transformations d'augmentation de données sur un ensemble d'images et de masques correspondants.
-
-    Paramètres:
-    X (numpy.ndarray): Un tableau numpy de images à augmenter. Chaque image est un tableau numpy 3D.
-    y (numpy.ndarray): Un tableau numpy de masques d'image correspondants à augmenter. Chaque masque est un tableau numpy 2D ou 3D.
-
-    Retourne:
-    tuple: Un tuple contenant deux tableaux numpy. Le premier tableau contient les images augmentées et le deuxième tableau contient les masques d'image augmentés correspondants.
-
-    La fonction utilise la bibliothèque imgaug pour appliquer une série de transformations d'augmentation de données, y compris la symétrie verticale, le flou gaussien, la modification du contraste, l'ajout de bruit gaussien, la modification de la luminosité et l'application d'une transformation affine (zoom, translation, rotation). Les transformations sont appliquées dans un ordre aléatoire.
-    """
     seq = iaa.Sequential(
         [
-            iaa.Sometimes(  # Symétrie verticale sur 50% des images
-                0.5, iaa.Fliplr(0.5)
-            ),
-            iaa.Sometimes(  # Flou gaussien sur 50% des images
-                0.5, iaa.GaussianBlur(sigma=(0, 0.2))
-            ),
-            iaa.LinearContrast((0.8, 1.2)),  # Modifie le contraste
-            iaa.AdditiveGaussianNoise(
-                scale=(0.0, 0.1 * 255)
-            ),  # Ajout d'un bruit gaussien
-            iaa.Multiply((0.8, 1.2)),  # Rend l'image plus sombre ou plus claire
-            iaa.Affine(  # Zoom, translation, rotation
-                scale={"x": (0.7, 1.3), "y": (0.7, 1.3)},
-                translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-                rotate=(-15, 15),
-            ),
+            iaa.Fliplr(1.0),  # always flip every image
+            #iaa.Affine(scale=(1.15)),  # scale images to 80-120% of their size
+            #iaa.AdditiveGaussianNoise(scale=(10, 20)),  # add gaussian noise to images
+            iaa.Multiply((1.2, 2.5)),  # multiply pixel values by 0.8-1.2 (randomly picked per image)
+            #iaa.LinearContrast((0.50, 1.50)),  # scale contrast by 0.75-1.25 (randomly picked per image)
+            #iaa.MultiplySaturation((0.5, 1.2))  # multiply saturation by 0.8-1.2 (randomly picked per image)
         ],
-        random_order=True,
-    )  # apply augmenters in random order
+        random_order=False,  # apply augmentations in the same order every time
+    )
 
     new_X = []
     new_y = []
@@ -132,15 +121,19 @@ def augment_data(X, y):
         mask = y[i]
         segmap = SegmentationMapsOnImage(mask, shape=img.shape)
 
-        imag_aug_i, segmap_aug_i = seq(image=img, segmentation_maps=segmap)
-        new_X.append(imag_aug_i)
-        new_y.append(segmap_aug_i.get_arr())
+        img_aug, segmap_aug = seq(image=img, segmentation_maps=segmap)
+        
+        # Resize the augmented images and masks to the original image size
+        img_aug = cv2.resize(img_aug, (img.shape[1], img.shape[0]))
+        segmap_aug = cv2.resize(segmap_aug.get_arr(), (img.shape[1], img.shape[0]))
+
+        new_X.append(img_aug)
+        new_y.append(segmap_aug)
 
     new_X = np.array(new_X)
     new_y = np.array(new_y)
 
     return new_X, new_y
-
 
 # Prépare les données pour la segmentation
 def get_data_prepared(path_X_list, path_Y_list, dim):

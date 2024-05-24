@@ -36,6 +36,17 @@ class DataGenerator(Sequence):
         "vehicle": (7),
     }
 
+    cats_color = {
+    "void": (0, 0, 0),  # Black
+    "flat": (128, 0, 128),  # Purple
+    "construction": (128, 128, 128),  # Grey
+    "object": (255, 255, 0),  # Yellow
+    "nature": (0, 128, 0),  # Green
+    "sky": (173, 216, 230),  # Light Blue
+    "human": (255, 0, 0),  # Red
+    "vehicle": (0, 0, 255),  # Blue
+    }
+
     def __init__(
         self,
         images_path,
@@ -56,10 +67,9 @@ class DataGenerator(Sequence):
             shuffle (bool, optional): Si vrai, mélange les données à chaque époque. Par défaut à True.
             augmentation (bool, optional): Si vrai, applique l'augmentation des données. Par défaut à False.
         """
-        self.images_path = sorted(images_path)  # liste contenant les chemins des images
-        self.labels_path = sorted(
-            labels_path
-        )  # liste contenant les chemins des masques
+        self.images_path = images_path  # liste contenant les chemins des images
+        self.labels_path = labels_path
+        # liste contenant les chemins des masques
         self.batch_size = batch_size
         self.dim = dim
         self.shuffle = shuffle
@@ -153,55 +163,38 @@ class DataGenerator(Sequence):
         return np.array(mask, dtype="uint8")
 
     def _augment_data(self, X, y):
-        """
-        Applique l'augmentation des données à un lot.
-
-        Args:
-            X (np.array): Les données d'entrée du lot.
-            y (np.array): Les données de sortie du lot.
-
-        Returns:
-            tuple: Les données d'entrée et de sortie augmentées.
-        """
         seq = iaa.Sequential(
             [
-                iaa.Sometimes(  # Symétrie verticale sur 50% des images
-                    0.5, iaa.Fliplr(0.5)
-                ),
-                iaa.Sometimes(  # Flou gaussien sur 50% des images
-                    0.5, iaa.GaussianBlur(sigma=(0, 0.5))
-                ),
-                iaa.LinearContrast((0.75, 1.5)),  # Modifie le contraste
-                iaa.AdditiveGaussianNoise(
-                    scale=(0.0, 0.2 * 255)
-                ),  # Ajout d'un bruit gaussien
-                iaa.Multiply((0.8, 1.2)),  # Rend l'image plus sombre ou plus claire
-                iaa.Affine(  # Zoom, translation, rotation
-                    scale={"x": (0.7, 1.3), "y": (0.7, 1.3)},
-                    translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-                    rotate=(-15, 15),
-                ),
+                iaa.Fliplr(1.0),  # always flip every image
+                #iaa.Affine(scale=(1.15)),  # scale images to 80-120% of their size
+                #iaa.AdditiveGaussianNoise(scale=(10, 20)),  # add gaussian noise to images
+                iaa.Multiply((1.2, 2.5)),  # multiply pixel values by 0.8-1.2 (randomly picked per image)
+                #iaa.LinearContrast((0.50, 1.50)),  # scale contrast by 0.75-1.25 (randomly picked per image)
+                #iaa.MultiplySaturation((0.5, 1.2))  # multiply saturation by 0.8-1.2 (randomly picked per image)
             ],
-            random_order=True,
-        )  # apply augmenters in random order
-
+            random_order=False,  # apply augmentations in the same order every time
+        )
+    
         new_X = []
         new_y = []
-
+    
         for i in range(len(X)):
             img = X[i]
             mask = y[i]
-            new_X.append(img)
-            new_y.append(mask)
             segmap = SegmentationMapsOnImage(mask, shape=img.shape)
-
-            imag_aug_i, segmap_aug_i = seq(image=img, segmentation_maps=segmap)
-            new_X.append(imag_aug_i)
-            new_y.append(segmap_aug_i.get_arr())
-
+    
+            img_aug, segmap_aug = seq(image=img, segmentation_maps=segmap)
+            
+            # Resize the augmented images and masks to the original image size
+            img_aug = cv2.resize(img_aug, (img.shape[1], img.shape[0]))
+            segmap_aug = cv2.resize(segmap_aug.get_arr(), (img.shape[1], img.shape[0]))
+    
+            new_X.append(img_aug)
+            new_y.append(segmap_aug)
+    
         new_X = np.array(new_X)
         new_y = np.array(new_y)
-
+    
         return new_X, new_y
 
     def _transform_data(self, X, y):
